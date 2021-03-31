@@ -124,7 +124,6 @@ public class AdminController {
             MediaType.APPLICATION_JSON_VALUE,MediaType.MULTIPART_FORM_DATA_VALUE
     })
     public ResponseEntity<Map> addFood(@Valid @RequestPart("food") FoodDTO foodDTO,BindingResult bindingResult, @RequestPart("file") MultipartFile file) {
-
         if (bindingResult.hasErrors()){
             Map<String, List<String>> response = new HashMap<>();
             List<String> errors = new ArrayList<>();

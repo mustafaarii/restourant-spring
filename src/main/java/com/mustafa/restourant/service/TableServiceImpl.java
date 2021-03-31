@@ -54,4 +54,9 @@ public class TableServiceImpl implements TableService {
     public List<Tables> getAllTables() {
         return tableRepository.findAll();
     }
+
+    @Override
+    public Tables findById(int id) {
+       return tableRepository.findById(id).get();
+    }
 }

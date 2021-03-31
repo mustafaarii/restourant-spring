@@ -2,17 +2,24 @@ package com.mustafa.restourant.controller;
 
 import com.mustafa.restourant.dto.CommentDTO;
 import com.mustafa.restourant.dto.OrderDTO;
+import com.mustafa.restourant.dto.ReservationDTO;
 import com.mustafa.restourant.dto.TableDTO;
 import com.mustafa.restourant.entity.*;
 import com.mustafa.restourant.service.*;
 import javassist.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.security.Principal;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @RestController
@@ -26,10 +33,12 @@ public class GuestController {
     private final ReceiptService receiptService;
     private final OrderService orderService;
     private final CommentService commentService;
+    private final ReservationService reservationService;
     private final int pageSize = 4;
 
     public GuestController(UserService userService, TableService tableService,
-                           FoodService foodService, CategoryService categoryService, ReceiptService receiptService, OrderService orderService, CommentService commentService) {
+                           FoodService foodService, CategoryService categoryService, ReceiptService receiptService,
+                           OrderService orderService, CommentService commentService, ReservationService reservationService) {
 
         this.userService = userService;
         this.tableService = tableService;
@@ -38,16 +47,7 @@ public class GuestController {
         this.receiptService = receiptService;
         this.orderService = orderService;
         this.commentService = commentService;
-    }
-
-    @GetMapping("/tables")
-    public Page<Tables> getTables(Pageable page){
-        return tableService.getTables(page.getPageNumber(),pageSize);
-    }
-
-    @GetMapping("all_tables")
-    public List<Tables> getAllTables(){
-        return tableService.getAllTables();
+        this.reservationService = reservationService;
     }
 
     @PostMapping("/sit_table")
@@ -221,6 +221,69 @@ public class GuestController {
         }
     }
 
+    @PostMapping("add_reservation")
+    public ResponseEntity<Map> addReservation(@Valid @RequestBody ReservationDTO reservationDTO, BindingResult result, Principal auth){
+        if(result.hasErrors()){ // doğrulamada bir hata olduysa hata dön
+            Map<String,List<String>> response = new HashMap<>();
+            List<String> errors = new ArrayList<>();
+            for (FieldError error : result.getFieldErrors()){
+                errors.add(error.getDefaultMessage());
+            }
+            response.put("errors",errors);
+            return new ResponseEntity<>(response,HttpStatus.OK);
+        }
+            Map<String,String> response = new HashMap<>();
+            Date start = reservationDTO.getStartTime();
+            Date end = reservationDTO.getEndTime();
+        User user = userService.findByEmail(auth.getName());
+        Tables table = tableService.findById(reservationDTO.getTableId());
+            if (end.getTime() - start.getTime() <= 0){ // bitiş zamanı başlangıçtan önceyse hata dön
+                response.put("status","false");
+                response.put("error","Bitiş zamanı başlangıç zamanından önce veya aynı zamanda olamaz.");
+            }else{
+                int reservationCount= reservationService.hoveManyReservations(start,end,table);
+                System.out.println(reservationCount);
+                if (reservationCount >0 ){ // seçilen tarihte rezervasyon varsa hata dön
+                    response.put("status","false");
+                    response.put("error","Seçtiğiniz saatler arasında bir rezervasyon bulunmaktadır.");
+                }else{
+
+                    if (table==null) {
+                        response.put("status","false");
+                        response.put("error","Böyle bir masa yok.");
+                    }else{
+                        try {
+                            reservationService.saveReservation(new Reservation(user,table,start,end));
+                            response.put("status","true");
+                            response.put("message","Rezervasyon başarıyla eklendi");
+                            return new ResponseEntity<>(response,HttpStatus.CREATED);
+                        }catch (Exception e){
+                            response.put("status","false");
+                            response.put("error","Rezervasyon eklenemedi. Daha sonra tekrar deneyin");
+                        }
+                    }
+                }
+
+            }
+
+            return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @GetMapping("search_reservation")
+    public List<Reservation> searchReservation(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date startTime, @RequestParam int tableId) throws ParseException {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        Date startDate = format.parse(format.format(startTime));
+        Date endDate = new Date(startDate.getTime()+86400000); // 1.5 gün sonrasının date nesnesi
+        Tables table = tableService.findById(tableId);
+
+        return reservationService.findReservationByDate(table,startDate,endDate);
+    }
+
+    @GetMapping("/all_reservations")
+    public List<Reservation> allReservations(){
+        return reservationService.findAll();
+    }
+
     @GetMapping("/all_foods")
     public Page<Food> allFoods(Pageable page){
         return foodService.allFoods(page.getPageNumber(),pageSize);
@@ -250,4 +313,15 @@ public class GuestController {
         User user = userService.findByEmail(auth.getName());
         return receiptService.findByUser(user,page.getPageNumber(),10);
     }
+
+    @GetMapping("/tables")
+    public Page<Tables> getTables(Pageable page){
+        return tableService.getTables(page.getPageNumber(),pageSize);
+    }
+
+    @GetMapping("all_tables")
+    public List<Tables> getAllTables(){
+        return tableService.getAllTables();
+    }
+
 }

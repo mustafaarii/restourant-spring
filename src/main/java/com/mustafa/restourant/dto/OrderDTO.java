@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class OrderDTO {
-    private int foodId;
-    private int count;
+    private Integer foodId;
+    private Integer count;
 
 }

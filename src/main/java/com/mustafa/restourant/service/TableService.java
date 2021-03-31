@@ -10,6 +10,7 @@ public interface TableService {
 
     Tables findByTableName(String tableName);
     Tables saveTable(Tables table);
+    Tables findById(int id);
     void deleteTable(int id);
     boolean findByUserBool(User user);
     Tables findByUser(User user);

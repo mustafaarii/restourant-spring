@@ -19,9 +19,9 @@ public class FoodDTO {
 
     @Max(value = 10000,message = "Yemek fiyatı en fazla 10.000 ₺ olabilir.")
     @NotNull(message = "Fiyat alanı boş bırakılamaz.")
-    private int price;
+    private Integer price;
 
     @NotNull(message = "Kategori alanı boş bırakılamaz.")
-    private int category;
+    private Integer category;
 
 }

@@ -1,6 +1,7 @@
 package com.mustafa.restourant.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -15,6 +16,7 @@ public class FoodComment {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties("reservations")
     private User user;
 
     @ManyToOne

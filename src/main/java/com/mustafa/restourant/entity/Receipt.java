@@ -1,6 +1,7 @@
 package com.mustafa.restourant.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -15,6 +16,7 @@ public class Receipt {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties("reservations")
     private User user;
 
     @Column(name = "total_price",nullable = false)

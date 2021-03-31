@@ -40,6 +40,9 @@ public class User {
     @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
     private List<FoodComment> foodComment;
 
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    private List<Reservation> reservations;
+
     public User() { }
 
     public User(String email, String password,String name) {
@@ -90,5 +93,9 @@ public class User {
 
     public void setWallet(int wallet) {
         this.wallet = wallet;
+    }
+
+    public List<Reservation> getReservations() {
+        return reservations;
     }
 }

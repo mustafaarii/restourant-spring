@@ -1,5 +1,7 @@
 package com.mustafa.restourant.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import javax.persistence.*;
 import java.util.List;
 
@@ -15,10 +17,14 @@ public class Tables {
 
     @OneToOne()
     @JoinColumn(name = "user")
+    @JsonIgnoreProperties({"reservations","role","wallet","email"})
     private User user;
 
     @OneToMany(mappedBy = "table",cascade = CascadeType.ALL)
     private List<Order> orders;
+
+    @OneToMany(mappedBy = "table",cascade = CascadeType.ALL)
+    private List<Reservation> reservations;
 
     public Tables() { }
 

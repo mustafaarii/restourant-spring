@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @RestController
@@ -85,6 +86,7 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<Map> createToken(@RequestBody LoginUserDTO authRequest) throws Exception {
+
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword()));
         } catch (BadCredentialsException ex) {
@@ -109,8 +111,6 @@ public class UserController {
                 .contentType(MediaType.IMAGE_JPEG)
                 .body(bytes);
     }
-
-
 
 
 }
