@@ -2,6 +2,8 @@ package com.mustafa.restourant.service;
 
 import com.mustafa.restourant.entity.Reservation;
 import com.mustafa.restourant.entity.Tables;
+import com.mustafa.restourant.entity.User;
+import com.mustafa.restourant.exception.NotFoundException;
 import com.mustafa.restourant.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,5 +35,29 @@ public class ReservationServiceImpl implements ReservationService{
     @Override
     public List<Reservation> findReservationByDate(Tables table,Date start,Date end) {
         return reservationRepository.findByTableAndStartTimeGreaterThanEqualAndStartTimeLessThanOrderByStartTimeAsc(table,start,end);
+    }
+
+    @Override
+    public Reservation findFirstReservationByTable(Tables table,Date date) {
+        return reservationRepository.findFirstByTableAndStartTimeGreaterThanEqualOrderByStartTimeAsc(table,date);
+    }
+
+    @Override
+    public int countReservationByStartTimeAndTable(Date start, Date end, Tables table) {
+        return reservationRepository.countByStartTimeBetweenAndTable(start,end,table);
+    }
+
+    @Override
+    public Reservation findReservationNow(Date date, User user) {
+        return reservationRepository.findReservationNow(date,user);
+    }
+
+    @Override
+    public void deleteReservationById(int id) {
+        try{
+            reservationRepository.deleteById(id);
+        }catch (Exception e){
+            throw new NotFoundException();
+        }
     }
 }

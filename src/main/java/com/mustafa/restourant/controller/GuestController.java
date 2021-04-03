@@ -64,13 +64,20 @@ public class GuestController {
                     response.put("status", "false");
                     response.put("error", "Bu masa dolu");
                 } else {
-                    table.setUser(user);
-                    tableService.saveTable(table);
-                    Receipt receipt = new Receipt(user,0,new Date(System.currentTimeMillis()));
-                    receiptService.saveReceipt(receipt);
-                    receipt = receiptService.findLastByUser(user);
-                    response.put("status", "true");
-                    response.put("message", "Masaya başarıyla oturdunuz");
+                    Date nowDate = new Date();
+                    Date tenMinutesLater = new Date(nowDate.getTime() +600000);
+                    int reservationCount = reservationService.countReservationByStartTimeAndTable(nowDate,tenMinutesLater,table);
+                    if (reservationCount > 0){
+                        response.put("status","false");
+                        response.put("error","Bu masanın 10 dakika içerisinde rezervasyonu bulunmaktadır.");
+                    }else{
+                        table.setUser(user);
+                        tableService.saveTable(table);
+                        Receipt receipt = new Receipt(user,0,new Date(System.currentTimeMillis()));
+                        receiptService.saveReceipt(receipt);
+                        response.put("status", "true");
+                        response.put("message", "Masaya başarıyla oturdunuz");
+                    }
                 }
             }else{
                 response.put("status", "false");
@@ -278,6 +285,55 @@ public class GuestController {
 
         return reservationService.findReservationByDate(table,startDate,endDate);
     }
+
+    @GetMapping("find_firstreservation")
+    public ResponseEntity<Map> findFirstReservation(@RequestParam int tableId){
+        Tables table = tableService.findById(tableId);
+        Date date = new Date();
+        Map<String,String> response = new HashMap<>();
+        Reservation reservation = reservationService.findFirstReservationByTable(table,date);
+            if (reservation==null){
+                response.put("status","false");
+                response.put("error","Masaya ait bir rezervasyon bulunamadı");
+            }
+            else{
+                Map<String,Reservation> success = new HashMap<>();
+                success.put("reservation",reservation);
+                return new ResponseEntity<>(success,HttpStatus.OK);
+            }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+
+    @GetMapping("check_reservation")
+    public ResponseEntity<Map> checkReservationThenSit(Principal auth){
+        User user = userService.findByEmail(auth.getName());
+        Date tenMinutesLater = new Date(new Date().getTime()+600000);
+        Reservation reservation = reservationService.findReservationNow(tenMinutesLater,user);
+        Map<String,String> response = new HashMap<>();
+        if (reservation != null){
+            if (reservation.getTable().getUser() != null){
+                response.put("status","false");
+                response.put("error","Masanın müşterisi bulunmaktadır. Yönetim ile iletişime geçiniz ve tekrar deneyiniz.");
+            }else{
+                Tables table = tableService.findById(reservation.getTable().getId());
+                table.setUser(user);
+                tableService.saveTable(table);
+                Receipt receipt = new Receipt(user,0,new Date(System.currentTimeMillis()));
+                receiptService.saveReceipt(receipt);
+                reservationService.deleteReservationById(reservation.getId());
+                response.put("status", "true");
+                response.put("message", "Rezervasyon yaptığınız masaya oturdunuz.");
+            }
+        }else{
+            response.put("status","false");
+            response.put("error","Şu anda bir rezervasyonunuz bulunmuyor.");
+            return new ResponseEntity<>(response,HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
 
     @GetMapping("/all_reservations")
     public List<Reservation> allReservations(){
