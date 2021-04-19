@@ -3,6 +3,7 @@ package com.mustafa.restourant.controller;
 import com.mustafa.restourant.dto.LoginUserDTO;
 import com.mustafa.restourant.dto.UserDTO;
 import com.mustafa.restourant.entity.Role;
+import com.mustafa.restourant.entity.SittingTime;
 import com.mustafa.restourant.entity.User;
 import com.mustafa.restourant.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StreamUtils;
 import org.springframework.validation.BindingResult;
@@ -22,10 +24,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 @RestController
@@ -33,6 +31,7 @@ public class UserController {
 
     private final RoleService roleService;
     private final UserService userService;
+    private final SittingTimeService sittingTimeService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -46,9 +45,10 @@ public class UserController {
     @Autowired
     private FilesStorageService filesStorageService;
 
-    public UserController(RoleService roleService, UserService userService) {
+    public UserController(RoleService roleService, UserService userService, SittingTimeService sittingTimeService) {
         this.roleService = roleService;
         this.userService = userService;
+        this.sittingTimeService = sittingTimeService;
     }
 
     @PostMapping(path = "/register")
@@ -77,6 +77,7 @@ public class UserController {
                 user.setRole(role);
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
                 userService.saveUser(user);
+                sittingTimeService.saveSittingTime(new SittingTime(user));
                 response.put("status", "true");
                 response.put("message", "Kullanıcı başarıyla oluşturuldu");
             }
@@ -85,12 +86,12 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map> createToken(@RequestBody LoginUserDTO authRequest) throws Exception {
+    public ResponseEntity<Map> createToken(@RequestBody LoginUserDTO authRequest) throws UsernameNotFoundException {
 
         try {
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword()));
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(),authRequest.getPassword()));
         } catch (BadCredentialsException ex) {
-            throw new Exception("Incorret username or password", ex);
+            throw new UsernameNotFoundException("Incorret username or password", ex);
         }
         final UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUsername());
         final String jwt = jwtUtil.generateToken(userDetails);

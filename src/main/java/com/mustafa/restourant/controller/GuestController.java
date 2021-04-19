@@ -1,12 +1,11 @@
 package com.mustafa.restourant.controller;
 
-import com.mustafa.restourant.dto.CommentDTO;
-import com.mustafa.restourant.dto.OrderDTO;
-import com.mustafa.restourant.dto.ReservationDTO;
-import com.mustafa.restourant.dto.TableDTO;
+import com.mustafa.restourant.dto.*;
 import com.mustafa.restourant.entity.*;
 import com.mustafa.restourant.service.*;
 import javassist.NotFoundException;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +20,8 @@ import java.security.Principal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/user")
@@ -34,11 +35,12 @@ public class GuestController {
     private final OrderService orderService;
     private final CommentService commentService;
     private final ReservationService reservationService;
+    private final SittingTimeService sittingTimeService;
     private final int pageSize = 4;
 
     public GuestController(UserService userService, TableService tableService,
                            FoodService foodService, CategoryService categoryService, ReceiptService receiptService,
-                           OrderService orderService, CommentService commentService, ReservationService reservationService) {
+                           OrderService orderService, CommentService commentService, ReservationService reservationService, SittingTimeService sittingTimeService) {
 
         this.userService = userService;
         this.tableService = tableService;
@@ -48,7 +50,11 @@ public class GuestController {
         this.orderService = orderService;
         this.commentService = commentService;
         this.reservationService = reservationService;
+        this.sittingTimeService = sittingTimeService;
     }
+
+    @Autowired
+    ModelMapper modelMapper;
 
     @PostMapping("/sit_table")
     public ResponseEntity<Map> sitTable(Principal auth, @RequestBody TableDTO tableDTO){
@@ -75,6 +81,13 @@ public class GuestController {
                         tableService.saveTable(table);
                         Receipt receipt = new Receipt(user,0,new Date(System.currentTimeMillis()));
                         receiptService.saveReceipt(receipt);
+
+                        // oturma zamanı ve sayısı update ediliyor
+                        SittingTime sittingTime = user.getSittingTime();
+                        sittingTime.setStartTime(new Date());
+                        sittingTime.setCount(sittingTime.getCount()+1);
+                        sittingTimeService.saveSittingTime(sittingTime);
+
                         response.put("status", "true");
                         response.put("message", "Masaya başarıyla oturdunuz");
                     }
@@ -165,6 +178,16 @@ public class GuestController {
            orderService.deleteByReceipt(receipt); // fişe göre siparişleri sil
            table.setUser(null); tableService.saveTable(table); // masayı boşa çıkar
             response.put("receipt",receipt);
+
+            SittingTime sittingTime = user.getSittingTime();
+            Date endTime = new Date();
+            Date startTime = sittingTime.getStartTime();
+            long difference = endTime.getTime()-startTime.getTime(); // bitiş ve başlangıç arasındaki fark
+            int total = (int) TimeUnit.MINUTES.convert(difference,TimeUnit.MILLISECONDS); // bu fark kaç dk eder ?
+            sittingTime.setEndTime(endTime);
+            sittingTime.setTotalMinute(total);
+            sittingTimeService.saveSittingTime(sittingTime); // değişiklikleri sittingTime için update et
+
             return new ResponseEntity<>(response,HttpStatus.OK);
         }catch (Exception e){
             System.out.println(e.getMessage());
@@ -244,10 +267,22 @@ public class GuestController {
             Date end = reservationDTO.getEndTime();
         User user = userService.findByEmail(auth.getName());
         Tables table = tableService.findById(reservationDTO.getTableId());
-            if (end.getTime() - start.getTime() <= 0){ // bitiş zamanı başlangıçtan önceyse hata dön
+        int totalRes = reservationService.countUserReservations(user);
+        int timeDifference = (int) (end.getTime() - start.getTime());
+
+            if (timeDifference <= 0){ // bitiş zamanı başlangıçtan önceyse hata dön
                 response.put("status","false");
                 response.put("error","Bitiş zamanı başlangıç zamanından önce veya aynı zamanda olamaz.");
-            }else{
+            }
+            else if(timeDifference > 10800000){
+                response.put("status","false");
+                response.put("error","3 saatten fazla bir rezervasyon oluşturamazsınız.");
+            }
+            else if (totalRes >= 3){
+                response.put("status","false");
+                response.put("error","3 rezervasyondan fazla yapamazsınız.");
+            }
+            else{
                 int reservationCount= reservationService.hoveManyReservations(start,end,table);
                 System.out.println(reservationCount);
                 if (reservationCount >0 ){ // seçilen tarihte rezervasyon varsa hata dön
@@ -311,6 +346,7 @@ public class GuestController {
         Date tenMinutesLater = new Date(new Date().getTime()+600000);
         Reservation reservation = reservationService.findReservationNow(tenMinutesLater,user);
         Map<String,String> response = new HashMap<>();
+
         if (reservation != null){
             if (reservation.getTable().getUser() != null){
                 response.put("status","false");
@@ -334,6 +370,47 @@ public class GuestController {
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
+    @GetMapping("/my_reservations")
+    public List<ReservationDTO2> myReservations(Principal auth){
+        User user = userService.findByEmail(auth.getName());
+        List<Reservation> myReservations = user.getReservations();
+        return myReservations.stream().map(reservation->modelMapper.map(reservation, ReservationDTO2.class))
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/delete_old_reservations")
+    public ResponseEntity deleteOldReservations(Principal auth) throws NotFoundException {
+        User user = userService.findByEmail(auth.getName());
+        try {
+            reservationService.deleteOldReservations(user);
+        }catch (Exception e){
+            throw new NotFoundException("Eski rezervasyonlar silinemedi.");
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/delete_reservation")
+    public ResponseEntity<Map> deleteReservation(Principal auth,@RequestParam int id){
+        Map<String,String> response = new HashMap<>();
+        User user = userService.findByEmail(auth.getName());
+        Reservation reservation = reservationService.findById(id);
+        response.put("status","false");
+        if (reservation==null){
+            response.put("error","Rezervasyon bulunamadı.");
+        }else if (reservation.getUser().getId() != user.getId()){ // kullanıcı rezervasyon sahibi değilse
+            response.put("error","Rezervasyon sahibi değilsiniz.");
+        }else{
+            reservationService.deleteReservationById(id);
+            response.put("status","true");
+            response.put("message","Rezervasyon başarıyla silindi.");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @GetMapping("/search_food")
+    public Page<Food> searchFood(@RequestParam String s,Pageable page){
+        return foodService.findBySearch(s,page.getPageNumber(),pageSize);
+    }
 
     @GetMapping("/all_reservations")
     public List<Reservation> allReservations(){
@@ -380,4 +457,10 @@ public class GuestController {
         return tableService.getAllTables();
     }
 
+    @GetMapping("/testauth")
+    public User test(Principal principal){
+        User user = userService.findByEmail(principal.getName());
+        System.out.println(user);
+        return user;
+    }
 }

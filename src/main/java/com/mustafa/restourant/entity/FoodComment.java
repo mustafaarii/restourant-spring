@@ -73,5 +73,6 @@ public class FoodComment {
     public void setDate(Date date) {
         this.date = date;
     }
+
 }
 

@@ -10,6 +10,7 @@ import java.util.List;
 public interface ReservationService {
 
     List<Reservation> findAll();
+    Reservation findById(int id);
     void saveReservation(Reservation reservation);
     int hoveManyReservations(Date start, Date end,Tables table);
     List<Reservation> findReservationByDate(Tables table,Date start, Date end);
@@ -17,4 +18,6 @@ public interface ReservationService {
     int countReservationByStartTimeAndTable(Date start,Date end,Tables table);
     Reservation findReservationNow(Date date, User user);
     void deleteReservationById(int id);
+    void deleteOldReservations(User user);
+    int countUserReservations(User user);
 }

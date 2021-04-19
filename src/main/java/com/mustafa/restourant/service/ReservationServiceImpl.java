@@ -60,4 +60,21 @@ public class ReservationServiceImpl implements ReservationService{
             throw new NotFoundException();
         }
     }
+
+    @Override
+    public void deleteOldReservations(User user){
+        Date date = new Date();
+        reservationRepository.deleteByEndTimeBeforeAndUser(date,user);
+    }
+
+    @Override
+    public Reservation findById(int id) {
+        return reservationRepository.findById(id).get();
+    }
+
+    @Override
+    public int countUserReservations(User user) {
+        Date date = new Date();
+        return reservationRepository.countReservationByUserAndEndTimeAfter(user,date);
+    }
 }

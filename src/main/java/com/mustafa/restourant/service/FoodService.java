@@ -10,4 +10,5 @@ public interface FoodService {
     Page<Food> allFoods(int page, int size);
     void deleteFood(int id);
     Page<Food> findByCategory(int id,int page,int size);
+    Page<Food> findBySearch(String name,int page, int size);
 }

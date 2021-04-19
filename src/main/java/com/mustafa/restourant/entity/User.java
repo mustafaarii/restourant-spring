@@ -1,6 +1,7 @@
 package com.mustafa.restourant.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
 import java.util.List;
@@ -42,6 +43,10 @@ public class User {
 
     @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
     private List<Reservation> reservations;
+
+    @OneToOne(mappedBy = "user",cascade = CascadeType.ALL)
+    @JsonIgnore
+    private SittingTime sittingTime;
 
     public User() { }
 
@@ -97,5 +102,9 @@ public class User {
 
     public List<Reservation> getReservations() {
         return reservations;
+    }
+
+    public SittingTime getSittingTime() {
+        return sittingTime;
     }
 }

@@ -6,6 +6,7 @@ import com.mustafa.restourant.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import javax.transaction.Transactional;
 import java.util.Date;
 import java.util.List;
 
@@ -24,4 +25,9 @@ public interface ReservationRepository extends JpaRepository<Reservation,Integer
     Reservation findReservationNow(Date date, User user);
 
     void deleteById(int id);
+
+    @Transactional
+    void deleteByEndTimeBeforeAndUser(Date date,User user);
+
+    int countReservationByUserAndEndTimeAfter(User user,Date date);
 }

@@ -2,14 +2,12 @@ package com.mustafa.restourant.service;
 
 import com.mustafa.restourant.entity.Food;
 import com.mustafa.restourant.repository.FoodRepository;
-import javassist.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 
 @Service
 public class FoodServiceImpl implements FoodService{
@@ -49,4 +47,12 @@ public class FoodServiceImpl implements FoodService{
         Page<Food> foods = foodRepository.findByCategory(id,pageable);
         return foods;
     }
+
+    @Override
+    public Page<Food> findBySearch(String name, int page, int size) {
+        Pageable pageable = PageRequest.of(page,size);
+        Page<Food> foods = foodRepository.findByFoodNameContaining(name,pageable);
+        return foods;
+    }
+
 }

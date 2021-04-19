@@ -16,4 +16,5 @@ public interface FoodRepository extends JpaRepository<Food,Integer> {
             value = "SELECT * FROM foods f WHERE f.category_id = ?1",
             nativeQuery = true)
     Page<Food> findByCategory(int id, Pageable pageable);
+    Page<Food> findByFoodNameContaining(String name,Pageable pageable);
 }
