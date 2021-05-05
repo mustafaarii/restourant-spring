@@ -1,7 +1,6 @@
 package com.mustafa.restourant.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import javax.persistence.*;
 import java.util.List;
@@ -14,24 +13,18 @@ public class User {
     @JsonIgnore
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-
     @Column(nullable = false)
     private String email;
-
     @Column(nullable = false)
     @JsonIgnore
     private String password;
-
     @Column(nullable = false)
     private String name;
-
     @Column(nullable = false)
     private int wallet=0;
-
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
-
     @Column
     boolean is_active=true;
 
@@ -47,6 +40,10 @@ public class User {
     @OneToOne(mappedBy = "user",cascade = CascadeType.ALL)
     @JsonIgnore
     private SittingTime sittingTime;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<SiteComment> siteComments;
 
     public User() { }
 
@@ -106,5 +103,9 @@ public class User {
 
     public SittingTime getSittingTime() {
         return sittingTime;
+    }
+
+    public List<SiteComment> getSiteComments() {
+        return siteComments;
     }
 }

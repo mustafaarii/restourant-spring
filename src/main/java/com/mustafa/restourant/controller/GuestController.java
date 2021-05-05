@@ -36,11 +36,13 @@ public class GuestController {
     private final CommentService commentService;
     private final ReservationService reservationService;
     private final SittingTimeService sittingTimeService;
+    private final SiteCommentService siteCommentService;
     private final int pageSize = 4;
 
     public GuestController(UserService userService, TableService tableService,
                            FoodService foodService, CategoryService categoryService, ReceiptService receiptService,
-                           OrderService orderService, CommentService commentService, ReservationService reservationService, SittingTimeService sittingTimeService) {
+                           OrderService orderService, CommentService commentService, ReservationService reservationService,
+                           SittingTimeService sittingTimeService, SiteCommentService siteCommentService) {
 
         this.userService = userService;
         this.tableService = tableService;
@@ -51,6 +53,7 @@ public class GuestController {
         this.commentService = commentService;
         this.reservationService = reservationService;
         this.sittingTimeService = sittingTimeService;
+        this.siteCommentService = siteCommentService;
     }
 
     @Autowired
@@ -218,7 +221,7 @@ public class GuestController {
 
 
     @PostMapping("add_comment")
-    public ResponseEntity<Map> addComment(@RequestBody CommentDTO comment, Principal auth) {
+    public ResponseEntity<Map> addFoodComment(@RequestBody CommentDTO comment, Principal auth) {
         Map<String, String> response = new HashMap<>();
         User user = userService.findByEmail(auth.getName());
         Food food = foodService.findById(comment.getFoodId());
@@ -239,6 +242,22 @@ public class GuestController {
             }
         }
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @PostMapping("/add_sitecomment")
+    public ResponseEntity<Map> addSiteComment(@RequestBody SiteCommentDTO comment, Principal auth){
+        Map<String, String> response = new HashMap<>();
+        User user = userService.findByEmail(auth.getName());
+        if (comment.getComment().length()<10){
+            response.put("status","false");
+            response.put("error","Yorumunuz en az 10 karakter olmalıdır");
+        }else{
+            SiteComment siteComment = new SiteComment(user,comment.getComment());
+            siteCommentService.saveComment(siteComment);
+            response.put("status","true");
+            response.put("message","Yorum başarıyla eklendi");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
     @GetMapping("/food/{id}")
@@ -273,9 +292,9 @@ public class GuestController {
         if (timeDifference <= 0) { // bitiş zamanı başlangıçtan önceyse hata dön
             response.put("status", "false");
             response.put("error", "Bitiş zamanı başlangıç zamanından önce veya aynı zamanda olamaz.");
-        } else if (timeDifference > 10800000) {
+        } else if (timeDifference < 1200000 || timeDifference > 10800000) {
             response.put("status", "false");
-            response.put("error", "3 saatten fazla bir rezervasyon oluşturamazsınız.");
+            response.put("error", "20 dakikadan az ve 3 saatten fazla bir rezervasyon oluşturamazsınız.");
         } else if (totalRes >= 3) {
             response.put("status", "false");
             response.put("error", "3 rezervasyondan fazla yapamazsınız.");
@@ -348,14 +367,23 @@ public class GuestController {
                 response.put("status", "false");
                 response.put("error", "Masanın müşterisi bulunmaktadır. Yönetim ile iletişime geçiniz ve tekrar deneyiniz.");
             } else {
-                Tables table = tableService.findById(reservation.getTable().getId());
-                table.setUser(user);
-                tableService.saveTable(table);
-                Receipt receipt = new Receipt(user, 0, new Date(System.currentTimeMillis()));
-                receiptService.saveReceipt(receipt);
-                reservationService.deleteReservationById(reservation.getId());
-                response.put("status", "true");
-                response.put("message", "Rezervasyon yaptığınız masaya oturdunuz.");
+                if (tableService.findByUser(user)!=null){
+                    response.put("status","false");
+                    response.put("error","Zaten bir masada oturuyorsunuz. Rezervasyonunuz bulunan masaya oturamadınız.");
+                }else{
+                    Tables table = tableService.findById(reservation.getTable().getId());
+                    table.setUser(user);
+                    tableService.saveTable(table);
+                    Receipt receipt = new Receipt(user, 0, new Date(System.currentTimeMillis()));
+                    receiptService.saveReceipt(receipt);
+                    reservationService.deleteReservationById(reservation.getId());
+
+                    SittingTime sittingTime = user.getSittingTime();
+                    sittingTime.setStartTime(new Date());
+                    sittingTime.setCount(sittingTime.getCount()+1);
+                    response.put("status", "true");
+                    response.put("message", "Rezervasyon yaptığınız masaya oturdunuz.");
+                }
             }
         } else {
             response.put("status", "false");

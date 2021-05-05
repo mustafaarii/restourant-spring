@@ -50,8 +50,9 @@ public class AdminController {
 
     @PostMapping("/add_table")
     public ResponseEntity<Map> createTable(@Valid @RequestBody TableDTO tableDTO, BindingResult bindingResult){
+        Map<String, Object> response = new HashMap<>();
+
         if (bindingResult.hasErrors()){
-            Map<String, List<String>> response = new HashMap<>();
             List<String> errors = new ArrayList<>();
             for (FieldError e : bindingResult.getFieldErrors()){
                 errors.add(e.getDefaultMessage());
@@ -62,28 +63,18 @@ public class AdminController {
         else{
             Tables isExist = tableService.findByTableName(tableDTO.getTableName());
             if (isExist!=null){
-                Map<String,String> response = new HashMap<>();
                 response.put("status","false");
                 response.put("error","Böyle bir masa zaten var.");
                 return new ResponseEntity<>(response,HttpStatus.OK);
             }else{
-                Map<String,Tables> response = new HashMap<>();
                 Tables table = new Tables(tableDTO.getTableName());
                Tables newTable =  tableService.saveTable(table);
+                response.put("status","true");
                 response.put("table",newTable);
                 return new ResponseEntity<>(response,HttpStatus.CREATED);
             }
 
         }
-    }
-
-    @DeleteMapping("/delete_table/{id}")
-    public ResponseEntity<Map> deleteTable(@PathVariable int id){
-        tableService.deleteTable(id);
-        Map<String,String> response = new HashMap<>();
-        response.put("status","true");
-        response.put("message","Masa başarıyla silindi");
-        return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
     @PostMapping(value = "/add_category")
@@ -110,6 +101,15 @@ public class AdminController {
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
+    @DeleteMapping("/delete_table/{id}")
+    public ResponseEntity<Map> deleteTable(@PathVariable int id){
+        tableService.deleteTable(id);
+        Map<String,String> response = new HashMap<>();
+        response.put("status","true");
+        response.put("message","Masa başarıyla silindi");
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+    
     @DeleteMapping("/delete_category/{id}")
     public ResponseEntity<Map> deleteCategory(@PathVariable int id){
         categoryService.deleteCategory(id);
