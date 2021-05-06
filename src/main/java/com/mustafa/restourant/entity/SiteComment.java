@@ -54,4 +54,8 @@ public class SiteComment {
     public void setDate(Date date) {
         this.date = date;
     }
+
+    public int getId() {
+        return id;
+    }
 }

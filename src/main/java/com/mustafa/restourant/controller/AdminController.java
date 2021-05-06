@@ -3,11 +3,10 @@ package com.mustafa.restourant.controller;
 import com.mustafa.restourant.dto.CategoryDTO;
 import com.mustafa.restourant.dto.FoodDTO;
 import com.mustafa.restourant.dto.TableDTO;
-import com.mustafa.restourant.entity.Category;
-import com.mustafa.restourant.entity.Food;
-import com.mustafa.restourant.entity.Tables;
-import com.mustafa.restourant.entity.User;
+import com.mustafa.restourant.entity.*;
 import com.mustafa.restourant.service.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,14 +31,16 @@ public class AdminController {
     private final FoodService foodService;
     private final FilesStorageService filesStorageService;
     private final CategoryService categoryService;
+    private final SiteCommentService siteCommentService;
 
     public AdminController(TableService tableService, UserService userService, FoodService foodService,
-                           FilesStorageService filesStorageService, CategoryService categoryService) {
+                           FilesStorageService filesStorageService, CategoryService categoryService, SiteCommentService siteCommentService) {
         this.tableService = tableService;
         this.userService = userService;
         this.foodService = foodService;
         this.filesStorageService = filesStorageService;
         this.categoryService = categoryService;
+        this.siteCommentService = siteCommentService;
     }
 
     @GetMapping("/allusers")
@@ -186,5 +187,24 @@ public class AdminController {
     private void deleteFile(String path) throws IOException {
         Path deleteFilePath = Paths.get("uploads/"+path);
         Files.delete(deleteFilePath);
+    }
+
+    @GetMapping("/all_sitecomments")
+    public Page<SiteComment> allComments(Pageable pageable){
+        return siteCommentService.allComments(pageable.getPageNumber(),4);
+    }
+
+    @GetMapping("/delete_sitecomment")
+    public ResponseEntity<Map> deleteComment(@RequestParam int id){
+        Map<String,String> response = new HashMap<>();
+        try{
+            siteCommentService.deleteCommentById(id);
+            response.put("status","true");
+            response.put("message","Yorum başarıyla silindi.");
+        }catch (Exception e){
+            response.put("status","false");
+            response.put("error","Yorum silinemedi.");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
     }
 }
