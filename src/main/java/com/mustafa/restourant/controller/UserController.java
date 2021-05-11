@@ -4,6 +4,7 @@ import com.mustafa.restourant.dto.LoginUserDTO;
 import com.mustafa.restourant.dto.UserDTO;
 import com.mustafa.restourant.entity.Role;
 import com.mustafa.restourant.entity.SittingTime;
+import com.mustafa.restourant.entity.Tip;
 import com.mustafa.restourant.entity.User;
 import com.mustafa.restourant.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ public class UserController {
     private final RoleService roleService;
     private final UserService userService;
     private final SittingTimeService sittingTimeService;
+    private final TipService tipService;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -45,10 +47,11 @@ public class UserController {
     @Autowired
     private FilesStorageService filesStorageService;
 
-    public UserController(RoleService roleService, UserService userService, SittingTimeService sittingTimeService) {
+    public UserController(RoleService roleService, UserService userService, SittingTimeService sittingTimeService, TipService tipService) {
         this.roleService = roleService;
         this.userService = userService;
         this.sittingTimeService = sittingTimeService;
+        this.tipService = tipService;
     }
 
     @PostMapping(path = "/register")

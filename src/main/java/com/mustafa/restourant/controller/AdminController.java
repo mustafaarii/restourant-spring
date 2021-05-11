@@ -32,15 +32,18 @@ public class AdminController {
     private final FilesStorageService filesStorageService;
     private final CategoryService categoryService;
     private final SiteCommentService siteCommentService;
-
+    private final EmployeesService employeesService;
+    private final int pageSize = 4;
     public AdminController(TableService tableService, UserService userService, FoodService foodService,
-                           FilesStorageService filesStorageService, CategoryService categoryService, SiteCommentService siteCommentService) {
+                           FilesStorageService filesStorageService, CategoryService categoryService,
+                           SiteCommentService siteCommentService, EmployeesService employeesService) {
         this.tableService = tableService;
         this.userService = userService;
         this.foodService = foodService;
         this.filesStorageService = filesStorageService;
         this.categoryService = categoryService;
         this.siteCommentService = siteCommentService;
+        this.employeesService = employeesService;
     }
 
     @GetMapping("/allusers")
@@ -172,6 +175,40 @@ public class AdminController {
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
+    @PostMapping("/add_employee")
+    public ResponseEntity<Map> addEmployee(@RequestBody Employees employee){
+        Map<String,String> response = new HashMap<>();
+
+        if (employee.getName().isEmpty()){
+            response.put("status","false");
+            response.put("error","Çalışan ismi boş geçilemez.");
+        }else {
+            try {
+                employeesService.saveEmployee(employee);
+                response.put("status","true");
+                response.put("message","Çalışan başarıyla eklendi");
+            }catch (Exception e){
+                response.put("status","false");
+                response.put("error","Bir hata oluştu, daha sonra tekrar deneyin.");
+            }
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @GetMapping("/delete_employee")
+    public ResponseEntity<Map> deleteEmployee(@RequestParam int id){
+        Map<String,String> response = new HashMap<>();
+        try {
+            employeesService.deleteEmployeeById(id);
+            response.put("status","true");
+            response.put("message","Çalışan başarıyla silindi.");
+        }catch (Exception e){
+            response.put("status","false");
+            response.put("error","Çalışan silinemedi.");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
     @DeleteMapping("/delete_food/{id}")
     public ResponseEntity<Map> deleteFood(@PathVariable int id) throws IOException {
         Food food = foodService.findById(id);
@@ -189,9 +226,14 @@ public class AdminController {
         Files.delete(deleteFilePath);
     }
 
+    @GetMapping("/all_employees")
+    public Page<Employees> allEmployees(Pageable pageable){
+        return employeesService.allEmployees(pageable.getPageNumber(),pageSize);
+    }
+
     @GetMapping("/all_sitecomments")
     public Page<SiteComment> allComments(Pageable pageable){
-        return siteCommentService.allComments(pageable.getPageNumber(),4);
+        return siteCommentService.allComments(pageable.getPageNumber(),pageSize);
     }
 
     @GetMapping("/delete_sitecomment")

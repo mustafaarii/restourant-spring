@@ -442,11 +442,6 @@ public class GuestController {
         return foodService.findBySearch(s, page.getPageNumber(), pageSize);
     }
 
-    @GetMapping("/all_reservations")
-    public List<Reservation> allReservations() {
-        return reservationService.findAll();
-    }
-
     @GetMapping("/all_foods")
     public Page<Food> allFoods(Pageable page) {
         return foodService.allFoods(page.getPageNumber(), pageSize);

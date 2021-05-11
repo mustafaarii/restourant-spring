@@ -45,6 +45,10 @@ public class User {
     @JsonIgnore
     private List<SiteComment> siteComments;
 
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL,fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Tip> tip;
+
     public User() { }
 
     public User(String email, String password,String name) {
@@ -107,5 +111,9 @@ public class User {
 
     public List<SiteComment> getSiteComments() {
         return siteComments;
+    }
+
+    public List<Tip> getTip() {
+        return tip;
     }
 }

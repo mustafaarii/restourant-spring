@@ -34,7 +34,8 @@ public class ReservationServiceImpl implements ReservationService{
 
     @Override
     public List<Reservation> findReservationByDate(Tables table,Date start,Date end) {
-        return reservationRepository.findByTableAndStartTimeGreaterThanEqualAndStartTimeLessThanOrderByStartTimeAsc(table,start,end);
+        return reservationRepository.
+                findByTableAndStartTimeGreaterThanEqualAndStartTimeLessThanOrderByStartTimeAsc(table,start,end);
     }
 
     @Override
