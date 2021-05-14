@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Principal;
 import java.util.*;
 
 @RestController
@@ -205,6 +206,22 @@ public class AdminController {
         }catch (Exception e){
             response.put("status","false");
             response.put("error","Çalışan silinemedi.");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @GetMapping("/reset_totaltip")
+    public ResponseEntity<Map> resetTotalTip(@RequestParam int id){
+        Map<String,String> response = new HashMap<>();
+        try{
+            Employees employee = employeesService.findById(id);
+            employee.setTotalTip(0);
+            employeesService.saveEmployee(employee);
+            response.put("status","true");
+            response.put("message","Bahşiş başarıyla sıfırlandı.");
+        }catch (Exception e){
+            response.put("status","false");
+            response.put("message","Bahşiş sıfırlanamadı.");
         }
         return new ResponseEntity<>(response,HttpStatus.OK);
     }

@@ -37,12 +37,13 @@ public class GuestController {
     private final ReservationService reservationService;
     private final SittingTimeService sittingTimeService;
     private final SiteCommentService siteCommentService;
+    private final EmployeesService employeesService;
     private final int pageSize = 4;
 
     public GuestController(UserService userService, TableService tableService,
                            FoodService foodService, CategoryService categoryService, ReceiptService receiptService,
                            OrderService orderService, CommentService commentService, ReservationService reservationService,
-                           SittingTimeService sittingTimeService, SiteCommentService siteCommentService) {
+                           SittingTimeService sittingTimeService, SiteCommentService siteCommentService, EmployeesService employeesService) {
 
         this.userService = userService;
         this.tableService = tableService;
@@ -54,6 +55,7 @@ public class GuestController {
         this.reservationService = reservationService;
         this.sittingTimeService = sittingTimeService;
         this.siteCommentService = siteCommentService;
+        this.employeesService = employeesService;
     }
 
     @Autowired
@@ -431,6 +433,27 @@ public class GuestController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping("/tip/{id}")
+    public ResponseEntity<Map> tipTheEmployee(@RequestBody Tip tip, @PathVariable int id, Principal auth){
+        Map<String,String> response = new HashMap<>();
+
+        User user = userService.findByEmail(auth.getName());
+        Employees employee = employeesService.findById(id);
+
+        if (user.getWallet() < tip.getTip()){
+            response.put("status","false");
+            response.put("error","Cüzdanınızda bu kadar para bulunmuyor, lütfen yükleme yapınız.");
+        }else {
+            tip.setEmployee(employee); tip.setUser(user);
+            employee.setTips(tip); user.setWallet(user.getWallet()-tip.getTip());
+            employeesService.saveEmployee(employee);
+            userService.saveUser(user);
+            response.put("status","true");
+            response.put("message","Bahşişiniz çalışan için kaydedildi, teşekkür ederiz.");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
     @GetMapping("/get_sittingtime")
     public SittingTime getSittingTime(Principal auth) {
         User user = userService.findByEmail(auth.getName());
@@ -483,5 +506,8 @@ public class GuestController {
     public List<Tables> getAllTables() {
         return tableService.getAllTables();
     }
+
+    @GetMapping("/all_employees")
+    public List<Employees> getAllEmployees(){return employeesService.getAllEmployes();}
 }
 

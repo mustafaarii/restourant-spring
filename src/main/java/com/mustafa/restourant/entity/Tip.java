@@ -10,17 +10,22 @@ public class Tip {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id",nullable = false)
     @ManyToOne
     private User user;
 
-    @JoinColumn(name = "employee_id")
+    @JoinColumn(name = "employee_id",nullable = false)
     @ManyToOne
     private Employees employee;
 
+    @Column(nullable = false)
     private int tip;
 
     public Tip(){ }
+
+    public Tip(int tip) {
+        this.tip = tip;
+    }
 
     public Tip(User user, Employees employee, int tip) {
         this.user = user;
@@ -44,5 +49,11 @@ public class Tip {
         this.tip = tip;
     }
 
+    public Employees getEmployee() {
+        return employee;
+    }
 
+    public void setEmployee(Employees employee) {
+        this.employee = employee;
+    }
 }
