@@ -65,21 +65,19 @@ public class GuestController {
     public ResponseEntity<Map> sitTable(Principal auth, @RequestBody TableDTO tableDTO) {
         User user = userService.findByEmail(auth.getName());
         Tables table = tableService.findByTableName(tableDTO.getTableName());
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", false);
         if (tableService.findByUserBool(user)) {
-            response.put("status", "false");
             response.put("error", "Zaten bir masada oturuyorsunuz");
         } else {
             if (table != null) {
                 if (table.getUser() != null) {
-                    response.put("status", "false");
                     response.put("error", "Bu masa dolu");
                 } else {
                     Date nowDate = new Date();
                     Date tenMinutesLater = new Date(nowDate.getTime() + 600000);
                     int reservationCount = reservationService.countReservationByStartTimeAndTable(nowDate, tenMinutesLater, table);
                     if (reservationCount > 0) {
-                        response.put("status", "false");
                         response.put("error", "Bu masanın 10 dakika içerisinde rezervasyonu bulunmaktadır.");
                     } else {
                         table.setUser(user);
@@ -92,13 +90,11 @@ public class GuestController {
                         sittingTime.setStartTime(new Date());
                         sittingTime.setCount(sittingTime.getCount() + 1);
                         sittingTimeService.saveSittingTime(sittingTime);
-
-                        response.put("status", "true");
+                        response.put("status", true);
                         response.put("message", "Masaya başarıyla oturdunuz");
                     }
                 }
             } else {
-                response.put("status", "false");
                 response.put("error", "Masa bulunamadı");
             }
         }
@@ -122,7 +118,8 @@ public class GuestController {
 
     @PostMapping("/to_order")
     public ResponseEntity<Map> toOrder(@RequestBody List<OrderDTO> orders, Principal auth) {
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", false);
 
         User user = userService.findByEmail(auth.getName());
         Receipt receipt = receiptService.findLastByUser(user);
@@ -130,7 +127,6 @@ public class GuestController {
         List<Food> foods = new ArrayList<>();
         int totalPrice = 0;
         if (receipt == null || table == null) {
-            response.put("status", "false");
             response.put("error", "Lütfen önce bir masaya oturun.");
         } else {
             // orderları dön, gerekli yemeği getir. Listeye ekle ve toplam fiyatı hesapla
@@ -141,7 +137,6 @@ public class GuestController {
             }
             // fiyat cüzdandan büyükse siparişi oluşturma
             if (totalPrice > user.getWallet()) {
-                response.put("status", "false");
                 response.put("error", "Yeterli bakiyeniz bulunmamaktadır. Lütfen yükleme yapınız.");
             } else {
                 int index = 0;
@@ -155,7 +150,7 @@ public class GuestController {
                 user.setWallet(user.getWallet() - totalPrice);
                 userService.saveUser(user);
                 receiptService.saveReceipt(receipt);
-                response.put("status", "true");
+                response.put("status", true);
                 response.put("message", "Tebrikler, siparişlerinizi aldık.");
             }
 
@@ -177,11 +172,13 @@ public class GuestController {
         User user = userService.findByEmail(auth.getName());
         Tables table = tableService.findByUser(user);
         Receipt receipt = receiptService.findLastByUser(user);
-        Map<String, Receipt> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", false);
         try {
             orderService.deleteByReceipt(receipt); // fişe göre siparişleri sil
             table.setUser(null);
             tableService.saveTable(table); // masayı boşa çıkar
+            response.put("status",true);
             response.put("receipt", receipt);
 
             SittingTime sittingTime = user.getSittingTime();
@@ -195,27 +192,24 @@ public class GuestController {
 
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            Map<String, String> error = new HashMap<>();
-            error.put("status", "false");
-            error.put("error", "İşleminiz gerçekleştirilemedi");
-            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+            response.put("error", "İşleminiz gerçekleştirilemedi");
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
 
     }
 
     @PostMapping("add_money")
     public ResponseEntity<Map> addMoney(@RequestBody int money, Principal auth) {
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", false);
 
         if (money < 0 || money > 1000) {
-            response.put("status", "false");
             response.put("error", "Yüklenecek bakiye 0 ₺'den küçük veya 1000 ₺'den büyük olamaz.");
         } else {
             User user = userService.findByEmail(auth.getName());
             user.setWallet(user.getWallet() + money);
             userService.saveUser(user);
-            response.put("status", "true");
+            response.put("status", true);
             response.put("message", "Bakiye başarıyla yüklendi.");
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -224,42 +218,26 @@ public class GuestController {
 
     @PostMapping("add_comment")
     public ResponseEntity<Map> addFoodComment(@RequestBody CommentDTO comment, Principal auth) {
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", false);
+
         User user = userService.findByEmail(auth.getName());
         Food food = foodService.findById(comment.getFoodId());
         String text = comment.getComment();
-        System.out.println(comment);
         if (text.length() < 10) {
-            response.put("status", "false");
             response.put("error", "Yorum en az 10 karakter olmalıdır.");
         } else {
             try {
                 FoodComment com = commentService.saveComment(new FoodComment(user, food, text));
-                Map<String, FoodComment> res = new HashMap<>();
-                res.put("comment", com);
-                return new ResponseEntity<>(res, HttpStatus.OK);
+                response.put("status",true);
+                response.put("comment", com);
+                return new ResponseEntity<>(response, HttpStatus.OK);
             } catch (Exception e) {
-                response.put("status", "false");
+                response.put("status", false);
                 response.put("error", "Yorum eklenemedi.");
             }
         }
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-    }
-
-    @PostMapping("/add_sitecomment")
-    public ResponseEntity<Map> addSiteComment(@RequestBody SiteCommentDTO comment, Principal auth){
-        Map<String, String> response = new HashMap<>();
-        User user = userService.findByEmail(auth.getName());
-        if (comment.getComment().length()<10){
-            response.put("status","false");
-            response.put("error","Yorumunuz en az 10 karakter olmalıdır");
-        }else{
-            SiteComment siteComment = new SiteComment(user,comment.getComment());
-            siteCommentService.saveComment(siteComment);
-            response.put("status","true");
-            response.put("message","Yorum başarıyla eklendi");
-        }
-        return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
     @GetMapping("/food/{id}")
@@ -274,8 +252,9 @@ public class GuestController {
 
     @PostMapping("add_reservation")
     public ResponseEntity<Map> addReservation(@Valid @RequestBody ReservationDTO reservationDTO, BindingResult result, Principal auth) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status",false);
         if (result.hasErrors()) { // doğrulamada bir hata olduysa hata dön
-            Map<String, List<String>> response = new HashMap<>();
             List<String> errors = new ArrayList<>();
             for (FieldError error : result.getFieldErrors()) {
                 errors.add(error.getDefaultMessage());
@@ -283,7 +262,7 @@ public class GuestController {
             response.put("errors", errors);
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
-        Map<String, String> response = new HashMap<>();
+
         Date start = reservationDTO.getStartTime();
         Date end = reservationDTO.getEndTime();
         User user = userService.findByEmail(auth.getName());
@@ -292,33 +271,27 @@ public class GuestController {
         int timeDifference = (int) (end.getTime() - start.getTime());
 
         if (timeDifference <= 0) { // bitiş zamanı başlangıçtan önceyse hata dön
-            response.put("status", "false");
             response.put("error", "Bitiş zamanı başlangıç zamanından önce veya aynı zamanda olamaz.");
         } else if (timeDifference < 1200000 || timeDifference > 10800000) {
-            response.put("status", "false");
             response.put("error", "20 dakikadan az ve 3 saatten fazla bir rezervasyon oluşturamazsınız.");
         } else if (totalRes >= 3) {
-            response.put("status", "false");
             response.put("error", "3 rezervasyondan fazla yapamazsınız.");
         } else {
             int reservationCount = reservationService.hoveManyReservations(start, end, table);
             System.out.println(reservationCount);
             if (reservationCount > 0) { // seçilen tarihte rezervasyon varsa hata dön
-                response.put("status", "false");
                 response.put("error", "Seçtiğiniz saatler arasında bir rezervasyon bulunmaktadır.");
             } else {
-
                 if (table == null) {
-                    response.put("status", "false");
                     response.put("error", "Böyle bir masa yok.");
                 } else {
                     try {
                         reservationService.saveReservation(new Reservation(user, table, start, end));
-                        response.put("status", "true");
+                        response.put("status", true);
                         response.put("message", "Rezervasyon başarıyla eklendi");
                         return new ResponseEntity<>(response, HttpStatus.CREATED);
                     } catch (Exception e) {
-                        response.put("status", "false");
+                        response.put("status", false);
                         response.put("error", "Rezervasyon eklenemedi. Daha sonra tekrar deneyin");
                     }
                 }
@@ -343,15 +316,15 @@ public class GuestController {
     public ResponseEntity<Map> findFirstReservation(@RequestParam int tableId) {
         Tables table = tableService.findById(tableId);
         Date date = new Date();
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
         Reservation reservation = reservationService.findFirstReservationByTable(table, date);
         if (reservation == null) {
-            response.put("status", "false");
+            response.put("status", false);
             response.put("error", "Masaya ait bir rezervasyon bulunamadı");
         } else {
-            Map<String, Reservation> success = new HashMap<>();
-            success.put("reservation", reservation);
-            return new ResponseEntity<>(success, HttpStatus.OK);
+            response.put("status",true);
+            response.put("reservation", reservation);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -362,15 +335,13 @@ public class GuestController {
         User user = userService.findByEmail(auth.getName());
         Date tenMinutesLater = new Date(new Date().getTime() + 600000);
         Reservation reservation = reservationService.findReservationNow(tenMinutesLater, user);
-        Map<String, String> response = new HashMap<>();
-
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", false);
         if (reservation != null) {
             if (reservation.getTable().getUser() != null) {
-                response.put("status", "false");
                 response.put("error", "Masanın müşterisi bulunmaktadır. Yönetim ile iletişime geçiniz ve tekrar deneyiniz.");
             } else {
                 if (tableService.findByUser(user)!=null){
-                    response.put("status","false");
                     response.put("error","Zaten bir masada oturuyorsunuz. Rezervasyonunuz bulunan masaya oturamadınız.");
                 }else{
                     Tables table = tableService.findById(reservation.getTable().getId());
@@ -383,12 +354,11 @@ public class GuestController {
                     SittingTime sittingTime = user.getSittingTime();
                     sittingTime.setStartTime(new Date());
                     sittingTime.setCount(sittingTime.getCount()+1);
-                    response.put("status", "true");
+                    response.put("status", true);
                     response.put("message", "Rezervasyon yaptığınız masaya oturdunuz.");
                 }
             }
         } else {
-            response.put("status", "false");
             response.put("error", "Şu anda bir rezervasyonunuz bulunmuyor.");
             return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
@@ -417,38 +387,54 @@ public class GuestController {
 
     @GetMapping("/delete_reservation")
     public ResponseEntity<Map> deleteReservation(Principal auth, @RequestParam int id) {
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
         User user = userService.findByEmail(auth.getName());
         Reservation reservation = reservationService.findById(id);
-        response.put("status", "false");
+        response.put("status", false);
         if (reservation == null) {
             response.put("error", "Rezervasyon bulunamadı.");
         } else if (reservation.getUser().getId() != user.getId()) { // kullanıcı rezervasyon sahibi değilse
             response.put("error", "Rezervasyon sahibi değilsiniz.");
         } else {
             reservationService.deleteReservationById(id);
-            response.put("status", "true");
+            response.put("status", true);
             response.put("message", "Rezervasyon başarıyla silindi.");
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping("/add_sitecomment")
+    public ResponseEntity<Map> addSiteComment(@RequestBody SiteCommentDTO comment, Principal auth){
+        Map<String, Object> response = new HashMap<>();
+        User user = userService.findByEmail(auth.getName());
+        if (comment.getComment().length()<10){
+            response.put("status",false);
+            response.put("error","Yorumunuz en az 10 karakter olmalıdır");
+        }else{
+            SiteComment siteComment = new SiteComment(user,comment.getComment());
+            siteCommentService.saveComment(siteComment);
+            response.put("status",true);
+            response.put("message","Yorum başarıyla eklendi");
+        }
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
     @PostMapping("/tip/{id}")
     public ResponseEntity<Map> tipTheEmployee(@RequestBody Tip tip, @PathVariable int id, Principal auth){
-        Map<String,String> response = new HashMap<>();
+        Map<String,Object> response = new HashMap<>();
 
         User user = userService.findByEmail(auth.getName());
         Employees employee = employeesService.findById(id);
 
         if (user.getWallet() < tip.getTip()){
-            response.put("status","false");
+            response.put("status",false);
             response.put("error","Cüzdanınızda bu kadar para bulunmuyor, lütfen yükleme yapınız.");
         }else {
             tip.setEmployee(employee); tip.setUser(user);
             employee.setTips(tip); user.setWallet(user.getWallet()-tip.getTip());
             employeesService.saveEmployee(employee);
             userService.saveUser(user);
-            response.put("status","true");
+            response.put("status",true);
             response.put("message","Bahşişiniz çalışan için kaydedildi, teşekkür ederiz.");
         }
         return new ResponseEntity<>(response,HttpStatus.OK);

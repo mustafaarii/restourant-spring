@@ -56,9 +56,9 @@ public class UserController {
 
     @PostMapping(path = "/register")
     public ResponseEntity<Map> createUser(@Valid @RequestBody UserDTO userDTO, BindingResult bindingResult) {
-
+        Map<String, Object> response = new HashMap<>();
+        response.put("status",false);
         if (bindingResult.hasErrors()) {
-            Map<String, List<String>> response = new HashMap<>();
             List<String> errors = new ArrayList<>();
             for (FieldError e : bindingResult.getFieldErrors()) {
                 errors.add(e.getDefaultMessage());
@@ -67,11 +67,8 @@ public class UserController {
             return new ResponseEntity<>(response, HttpStatus.OK);
         } else {
             BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-            Map<String, String> response = new HashMap<>();
             User isExist = userService.findByEmail(userDTO.getEmail());
             if (isExist != null) {
-                response.put("status", "false");
                 response.put("error", "Böyle bir kullanıcı var.");
 
             } else {
@@ -81,7 +78,7 @@ public class UserController {
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
                 userService.saveUser(user);
                 sittingTimeService.saveSittingTime(new SittingTime(user));
-                response.put("status", "true");
+                response.put("status", true);
                 response.put("message", "Kullanıcı başarıyla oluşturuldu");
             }
             return new ResponseEntity<>(response, HttpStatus.CREATED);

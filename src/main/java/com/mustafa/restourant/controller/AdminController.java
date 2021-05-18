@@ -56,7 +56,7 @@ public class AdminController {
     @PostMapping("/add_table")
     public ResponseEntity<Map> createTable(@Valid @RequestBody TableDTO tableDTO, BindingResult bindingResult){
         Map<String, Object> response = new HashMap<>();
-
+        response.put("status",false);
         if (bindingResult.hasErrors()){
             List<String> errors = new ArrayList<>();
             for (FieldError e : bindingResult.getFieldErrors()){
@@ -68,13 +68,13 @@ public class AdminController {
         else{
             Tables isExist = tableService.findByTableName(tableDTO.getTableName());
             if (isExist!=null){
-                response.put("status","false");
                 response.put("error","Böyle bir masa zaten var.");
                 return new ResponseEntity<>(response,HttpStatus.OK);
             }else{
                 Tables table = new Tables(tableDTO.getTableName());
                Tables newTable =  tableService.saveTable(table);
-                response.put("status","true");
+                response.put("status",true);
+                response.put("message","Masa başarıyla eklendi");
                 response.put("table",newTable);
                 return new ResponseEntity<>(response,HttpStatus.CREATED);
             }
@@ -84,8 +84,9 @@ public class AdminController {
 
     @PostMapping(value = "/add_category")
     public ResponseEntity<Map> addCategory(@Valid @RequestBody CategoryDTO categoryDTO,BindingResult bindingResult){
+        Map<String, Object> response = new HashMap<>();
+        response.put("status",false);
         if (bindingResult.hasErrors()){
-            Map<String, List<String>> response = new HashMap<>();
             List<String> errors = new ArrayList<>();
             for (FieldError e : bindingResult.getFieldErrors()){
                 errors.add(e.getDefaultMessage());
@@ -93,14 +94,12 @@ public class AdminController {
             response.put("errors",errors);
             return new ResponseEntity<>(response,HttpStatus.OK);
         }
-        Map<String,String> response = new HashMap<>();
         if (categoryService.isExistCategoryByName(categoryDTO.getName())){
-            response.put("status","false");
             response.put("error","Böyle bir kategori zaten var.");
         }else {
             Category category = new Category(categoryDTO.getName());
             categoryService.saveCategory(category);
-            response.put("status","true");
+            response.put("status",true);
             response.put("message","Kategori başarıyla kaydedildi.");
         }
         return new ResponseEntity<>(response,HttpStatus.OK);
@@ -109,8 +108,8 @@ public class AdminController {
     @DeleteMapping("/delete_table/{id}")
     public ResponseEntity<Map> deleteTable(@PathVariable int id){
         tableService.deleteTable(id);
-        Map<String,String> response = new HashMap<>();
-        response.put("status","true");
+        Map<String,Object> response = new HashMap<>();
+        response.put("status",true);
         response.put("message","Masa başarıyla silindi");
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
@@ -118,8 +117,8 @@ public class AdminController {
     @DeleteMapping("/delete_category/{id}")
     public ResponseEntity<Map> deleteCategory(@PathVariable int id){
         categoryService.deleteCategory(id);
-        Map<String,String> response = new HashMap<>();
-        response.put("status","true");
+        Map<String,Object> response = new HashMap<>();
+        response.put("status",true);
         response.put("message","Kategori başarıyla silindi");
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
@@ -129,8 +128,9 @@ public class AdminController {
             MediaType.APPLICATION_JSON_VALUE,MediaType.MULTIPART_FORM_DATA_VALUE
     })
     public ResponseEntity<Map> addFood(@Valid @RequestPart("food") FoodDTO foodDTO,BindingResult bindingResult, @RequestPart("file") MultipartFile file) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status",false);
         if (bindingResult.hasErrors()){
-            Map<String, List<String>> response = new HashMap<>();
             List<String> errors = new ArrayList<>();
             for (FieldError e : bindingResult.getFieldErrors()){
                 errors.add(e.getDefaultMessage());
@@ -138,15 +138,11 @@ public class AdminController {
             response.put("errors",errors);
             return new ResponseEntity<>(response,HttpStatus.OK);
         }
-        Map<String,String> response = new HashMap<>();
-
         if (foodService.findByFoodName(foodDTO.getFoodName())!=null) {
-            response.put("status","false");
             response.put("error","Bu yemek daha önce eklenmiş.");
         }else {
           Category foodCategory = categoryService.findById(foodDTO.getCategory());
           if (foodCategory==null){
-              response.put("status","false");
               response.put("error","Böyle bir kategori yok.");
           }else {
               // resmi yükleme
@@ -159,16 +155,14 @@ public class AdminController {
                       filesStorageService.save(file,fileName); //resmi kaydet
                       Food food = new Food(foodDTO.getFoodName(),foodDTO.getPrice(),fileName,foodCategory); //yemek oluştur
                       foodService.saveFood(food);
-                      response.put("status","true");
+                      response.put("status",true);
                       response.put("message","Yemek başarıyla eklendi.");
                       return new ResponseEntity<>(response,HttpStatus.CREATED);
                   }else {
-                      response.put("status","false");
                       response.put("error","Dosyanız png veya jpg uzantılı olmalıdır.");
                   }
 
               } catch (Exception e) {
-                  response.put("status","false");
                   response.put("error","Dosya yüklenemedi.");
               }
           }
@@ -178,18 +172,16 @@ public class AdminController {
 
     @PostMapping("/add_employee")
     public ResponseEntity<Map> addEmployee(@RequestBody Employees employee){
-        Map<String,String> response = new HashMap<>();
-
+        Map<String,Object> response = new HashMap<>();
+        response.put("status",false);
         if (employee.getName().isEmpty()){
-            response.put("status","false");
             response.put("error","Çalışan ismi boş geçilemez.");
         }else {
             try {
                 employeesService.saveEmployee(employee);
-                response.put("status","true");
+                response.put("status",true);
                 response.put("message","Çalışan başarıyla eklendi");
             }catch (Exception e){
-                response.put("status","false");
                 response.put("error","Bir hata oluştu, daha sonra tekrar deneyin.");
             }
         }
@@ -198,13 +190,13 @@ public class AdminController {
 
     @GetMapping("/delete_employee")
     public ResponseEntity<Map> deleteEmployee(@RequestParam int id){
-        Map<String,String> response = new HashMap<>();
+        Map<String,Object> response = new HashMap<>();
         try {
             employeesService.deleteEmployeeById(id);
-            response.put("status","true");
+            response.put("status",true);
             response.put("message","Çalışan başarıyla silindi.");
         }catch (Exception e){
-            response.put("status","false");
+            response.put("status",false);
             response.put("error","Çalışan silinemedi.");
         }
         return new ResponseEntity<>(response,HttpStatus.OK);
@@ -212,15 +204,15 @@ public class AdminController {
 
     @GetMapping("/reset_totaltip")
     public ResponseEntity<Map> resetTotalTip(@RequestParam int id){
-        Map<String,String> response = new HashMap<>();
+        Map<String,Object> response = new HashMap<>();
         try{
             Employees employee = employeesService.findById(id);
             employee.setTotalTip(0);
             employeesService.saveEmployee(employee);
-            response.put("status","true");
+            response.put("status",true);
             response.put("message","Bahşiş başarıyla sıfırlandı.");
         }catch (Exception e){
-            response.put("status","false");
+            response.put("status",false);
             response.put("message","Bahşiş sıfırlanamadı.");
         }
         return new ResponseEntity<>(response,HttpStatus.OK);
@@ -231,9 +223,9 @@ public class AdminController {
         Food food = foodService.findById(id);
         foodService.deleteFood(food.getId());
         deleteFile(food.getImage());
-        Map<String,String> response = new HashMap<>();
+        Map<String,Object> response = new HashMap<>();
 
-        response.put("status","true");
+        response.put("status",true);
         response.put("message","Yemek başarıyla silindi.");
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
@@ -255,13 +247,13 @@ public class AdminController {
 
     @GetMapping("/delete_sitecomment")
     public ResponseEntity<Map> deleteComment(@RequestParam int id){
-        Map<String,String> response = new HashMap<>();
+        Map<String,Object> response = new HashMap<>();
         try{
             siteCommentService.deleteCommentById(id);
-            response.put("status","true");
+            response.put("status",true);
             response.put("message","Yorum başarıyla silindi.");
         }catch (Exception e){
-            response.put("status","false");
+            response.put("status",false);
             response.put("error","Yorum silinemedi.");
         }
         return new ResponseEntity<>(response,HttpStatus.OK);
